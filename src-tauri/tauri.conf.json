@@ -33,7 +33,6 @@
     ],
     "macOS": {
       "infoPlist": "Info.plist",
-      "signingIdentity": "Apple Development: YOUR_APPLE_ID (YOUR_TEAM_OR_CERT_ID)",
       "entitlements": "entitlements.plist"
     }
   }
