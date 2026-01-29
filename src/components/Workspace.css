@@ -1,0 +1,145 @@
+.workspace {
+  flex: 1;
+  min-height: 0; /* critical in flex layouts */
+  background: #09090b;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-toolbar {
+  height: 48px;
+  border-bottom: 1px solid #27272a;
+  background: #111113;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.workspace-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.record-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 2px;
+  border: 1px solid;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.record-button.idle {
+  background: #e4e4e7;
+  border-color: #e4e4e7;
+  color: black;
+}
+
+.record-button.idle:hover {
+  background: white;
+}
+
+.record-button.recording {
+  background: rgba(153, 27, 27, 0.2);
+  border-color: rgba(153, 27, 27, 0.5);
+  color: #ef4444;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.idle {
+  background: #3f3f46;
+}
+
+.status-dot.listening {
+  background: #ef4444;
+}
+
+.status-dot.processing {
+  background: #f59e0b;
+}
+
+.status-text {
+  font-size: 12px;
+  font-family: 'SF Mono', Consolas, monospace;
+  font-weight: 500;
+  color: #71717a;
+}
+
+.workspace-content {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.workspace-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #52525b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.workspace-action {
+  font-size: 10px;
+  color: #52525b;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.workspace-action:hover {
+  color: #d4d4d8;
+}
+
+.workspace-textarea {
+  flex: 1;
+  background: #111113;
+  border: 1px solid #27272a;
+  padding: 16px;
+  color: #e4e4e7;
+  font-size: 14px;
+  font-family: 'SF Mono', Consolas, monospace;
+  resize: none;
+}
+
+.workspace-textarea:focus {
+  outline: none;
+  border-color: #52525b;
+}
+
+.workspace-textarea::placeholder {
+  color: #27272a;
+}

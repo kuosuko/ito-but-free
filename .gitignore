@@ -1,0 +1,26 @@
+# Node
+node_modules/
+dist/
+.vite/
+*.log
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# Tauri / Rust
+src-tauri/target/
+**/*.rs.bk
+
+# Bundles / artifacts
+*.dmg
+*.app
+*.zip
+
+# pnpm
+.pnpm-store/

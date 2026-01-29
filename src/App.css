@@ -1,0 +1,64 @@
+body {
+  font-family: "Fira Code", monospace;
+  background-color: #18181b;
+  color: #e5e5e5;
+  margin: 0;
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Main Content Layout */
+.content {
+  display: flex;
+  flex: 1;
+  min-height: 0; /* critical: allow children to scroll instead of overlap */
+  width: 100%;
+}
+
+/* Sidebar sizing: keep it usable; everything else can squish */
+.sidebar {
+  width: clamp(260px, 28vw, 360px);
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.center-panel {
+  flex: 1 1 auto;
+  min-width: 0; /* allow center content to shrink */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #09090b;
+}
+
+/* Logs panel: clamp height; always scroll */
+.logs-panel {
+  height: clamp(140px, 22vh, 240px);
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #3f3f46;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #52525b;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #18181b;
+}
