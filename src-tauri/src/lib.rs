@@ -10,15 +10,38 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 mod auto_type;
 mod fn_key_listener;
+pub mod platform;
 mod recorder;
 mod settings;
 mod transcribe;
 
-#[derive(Default)]
+/// Wrapper for the platform FnKeyListener to implement required traits.
+struct FnKeyListenerWrapper(platform::FnKeyListener);
+
+// The wrapper is Send + Sync because platform::FnKeyListener's handle is.
+unsafe impl Send for FnKeyListenerWrapper {}
+unsafe impl Sync for FnKeyListenerWrapper {}
+
+impl FnKeyListenerWrapper {
+    fn stop(&self) {
+        self.0.stop();
+    }
+}
+
 struct AppState {
     session: std::sync::Mutex<Option<recorder::RecordingSession>>,
     hotkey: std::sync::Mutex<Option<Shortcut>>,
-    fn_listener: std::sync::Mutex<Option<fn_key_listener::FnKeyListener>>,
+    fn_listener: std::sync::Mutex<Option<FnKeyListenerWrapper>>,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            session: std::sync::Mutex::new(None),
+            hotkey: std::sync::Mutex::new(None),
+            fn_listener: std::sync::Mutex::new(None),
+        }
+    }
 }
 
 #[derive(Serialize, Clone)]
@@ -68,65 +91,15 @@ fn resolve_trigger_mode<R: Runtime>(app: &AppHandle<R>) -> String {
         .unwrap_or_else(|| DEFAULT_TRIGGER_MODE.to_string())
 }
 
-#[cfg(target_os = "macos")]
+/// Check if accessibility permissions are granted (uses platform abstraction).
 fn is_accessibility_trusted() -> bool {
-    #[link(name = "ApplicationServices", kind = "framework")]
-    extern "C" {
-        fn AXIsProcessTrusted() -> bool;
-    }
-    unsafe { AXIsProcessTrusted() }
+    platform::current().is_accessibility_trusted()
 }
 
-#[cfg(target_os = "macos")]
+/// Request accessibility permission (uses platform abstraction).
+#[allow(dead_code)]
 fn request_accessibility_permission() -> bool {
-    use std::ffi::c_void;
-    
-    #[link(name = "CoreFoundation", kind = "framework")]
-    extern "C" {
-        fn CFDictionaryCreate(
-            allocator: *const c_void,
-            keys: *const *const c_void,
-            values: *const *const c_void,
-            numValues: isize,
-            keyCallBacks: *const c_void,
-            valueCallBacks: *const c_void,
-        ) -> *const c_void;
-        fn CFRelease(cf: *const c_void);
-        static kCFBooleanTrue: *const c_void;
-    }
-    
-    #[link(name = "ApplicationServices", kind = "framework")]
-    extern "C" {
-        fn AXIsProcessTrustedWithOptions(options: *const c_void) -> bool;
-        static kAXTrustedCheckOptionPrompt: *const c_void;
-    }
-    
-    unsafe {
-        let keys = [kAXTrustedCheckOptionPrompt];
-        let values = [kCFBooleanTrue];
-        let options = CFDictionaryCreate(
-            std::ptr::null(),
-            keys.as_ptr() as *const *const c_void,
-            values.as_ptr() as *const *const c_void,
-            1,
-            std::ptr::null(),
-            std::ptr::null(),
-        );
-        
-        let result = AXIsProcessTrustedWithOptions(options);
-        
-        if !options.is_null() {
-            CFRelease(options);
-        }
-        
-        result
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-fn is_accessibility_trusted() -> bool {
-    // On non-macOS, don't block MVP UX on this check.
-    true
+    platform::current().request_accessibility_permission()
 }
 
 // (clipboard removed)
@@ -154,7 +127,9 @@ fn type_text_into_focused_app<R: Runtime>(app: &AppHandle<R>, text: &str) -> Res
 
     let delay_ms = resolve_type_speed_ms(app);
     let delay = Duration::from_millis(delay_ms);
-    auto_type::type_text(text, delay)
+    
+    // Use platform abstraction for text injection
+    platform::current().type_text(text, delay)
 }
 
 fn resolve_hotkey_string<R: Runtime>(app: &AppHandle<R>) -> String {
@@ -465,14 +440,7 @@ fn accessibility_status() -> Result<bool, String> {
 
 #[tauri::command]
 fn request_accessibility() -> Result<bool, String> {
-    #[cfg(target_os = "macos")]
-    {
-        Ok(request_accessibility_permission())
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        Ok(true)
-    }
+    Ok(platform::current().request_accessibility_permission())
 }
 
 #[tauri::command]
@@ -485,7 +453,8 @@ fn enable_fn_key_listening(
     }
 
     let app_handle = app.clone();
-    let listener = fn_key_listener::FnKeyListener::new(move |pressed| {
+    // Use the platform abstraction's FnKeyListener compatibility shim
+    let listener = platform::FnKeyListener::new(move |pressed| {
         let app = app_handle.clone();
         let state_inner = app.state::<AppState>();
         let mode = resolve_trigger_mode(&app);
@@ -552,8 +521,9 @@ fn enable_fn_key_listening(
         }
     })?;
 
+    // Store as the old type for compatibility (we wrap it)
     let mut guard = state.inner().fn_listener.lock().map_err(|e| e.to_string())?;
-    *guard = Some(listener);
+    *guard = Some(FnKeyListenerWrapper(listener));
 
     emit_log(&app, "info", "Fn key listening enabled");
     Ok(())
