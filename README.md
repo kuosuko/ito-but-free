@@ -1,6 +1,19 @@
-# ito-but-free
+<div align="center">
+  <img src="assets/icon.png" alt="ito-but-free icon" width="120" />
 
-A macOS speech-to-text app — Ito, but BYOK (bring your own key). Free.
+  <h1>ito-but-free</h1>
+
+  <p>
+    A macOS speech-to-text app — Ito, but BYOK (bring your own key). Free.
+  </p>
+
+  <p>
+    <em>
+      README drafted by a robot butler (Clawdbot) under strict instructions.
+      If anything looks too confident, it was probably hallucinating.
+    </em>
+  </p>
+</div>
 
 ## Status
 Early release / WIP.
