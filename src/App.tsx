@@ -10,8 +10,9 @@ import Workspace from "./components/Workspace";
 import LogsPanel from "./components/LogsPanel";
 
 function App() {
-  // Core states
-  const [isRecording, setIsRecording] = useState<boolean>(false);
+  // Core states: "idle" | "recording" | "processing"
+  type RecordingState = "idle" | "recording" | "processing";
+  const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [transcription, setTranscription] = useState<string>("");
   const [logs, setLogs] = useState<{ level: string; message: string; timestamp: string }[]>([]);
 
@@ -31,6 +32,7 @@ function App() {
   useEffect(() => {
     let unlistenLog: undefined | (() => void);
     let unlistenTx: undefined | (() => void);
+    let unlistenState: undefined | (() => void);
 
     (async () => {
       // Setup event listeners
@@ -50,10 +52,15 @@ function App() {
         } catch {}
       });
 
+      unlistenState = await listen<string>("recording_state", (event) => {
+        const state = event.payload as RecordingState;
+        setRecordingState(state);
+      });
+
       // Load all settings
       try {
         const status = await invoke<boolean>("recording_status");
-        setIsRecording(status);
+        if (status) setRecordingState("recording");
         
         const key = await invoke<string | null>("get_groq_api_key");
         setApiKey(key ?? "");
@@ -92,19 +99,26 @@ function App() {
     return () => {
       unlistenLog?.();
       unlistenTx?.();
+      unlistenState?.();
     };
   }, []);
 
   // Action handlers
   async function toggleRecording() {
-    if (isRecording) {
-      const text = await invoke<string>("stop_and_transcribe");
-      setIsRecording(false);
-      setTranscription(text);
-    } else {
+    if (recordingState === "recording") {
+      setRecordingState("processing");
+      try {
+        const text = await invoke<string>("stop_and_transcribe");
+        setTranscription(text);
+      } catch (err) {
+        console.error("Transcription failed:", err);
+      }
+      setRecordingState("idle");
+    } else if (recordingState === "idle") {
       await invoke("start_recording");
-      setIsRecording(true);
+      setRecordingState("recording");
     }
+    // If "processing", ignore clicks
   }
 
   async function handleSaveApiKey(key: string) {
@@ -235,7 +249,7 @@ function App() {
 
         <div className="center-panel">
           <Workspace
-            isRecording={isRecording}
+            recordingState={recordingState}
             onToggleRecording={toggleRecording}
             transcription={transcription}
             onSetTranscription={setTranscription}

@@ -64,6 +64,27 @@
   background: rgba(239, 68, 68, 0.2);
 }
 
+.record-button.processing {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  cursor: wait;
+}
+
+.record-button:disabled {
+  cursor: wait;
+}
+
+/* Spinner animation for Loader icon */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Status indicator */
 .status-indicator {
   display: flex;
@@ -82,9 +103,14 @@
   background: #3f3f46;
 }
 
-.status-dot.listening {
+.status-dot.recording {
   background: #ef4444;
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-dot.processing {
+  background: #f59e0b;
+  animation: pulse 1s ease-in-out infinite;
 }
 
 @keyframes pulse {

@@ -1,15 +1,17 @@
 import "./Workspace.css";
-import { Mic, Square, Copy, Trash2 } from "lucide-react";
+import { Mic, Square, Copy, Trash2, Loader } from "lucide-react";
+
+type RecordingState = "idle" | "recording" | "processing";
 
 interface WorkspaceProps {
-  isRecording: boolean;
+  recordingState: RecordingState;
   onToggleRecording: () => void;
   transcription: string;
   onSetTranscription: (text: string) => void;
 }
 
 const Workspace = ({
-  isRecording,
+  recordingState,
   onToggleRecording,
   transcription,
   onSetTranscription,
@@ -20,6 +22,12 @@ const Workspace = ({
     navigator.clipboard.writeText(transcription);
   };
 
+  const statusLabel = {
+    idle: "Ready",
+    recording: "Listening...",
+    processing: "Transcribing...",
+  }[recordingState];
+
   return (
     <div className="workspace">
       {/* Toolbar */}
@@ -27,12 +35,18 @@ const Workspace = ({
         <div className="workspace-toolbar-left">
           <button
             onClick={onToggleRecording}
-            className={`record-button ${isRecording ? "recording" : "idle"}`}
+            disabled={recordingState === "processing"}
+            className={`record-button ${recordingState}`}
           >
-            {isRecording ? (
+            {recordingState === "recording" ? (
               <>
                 <Square size={12} fill="currentColor" />
                 <span>Stop</span>
+              </>
+            ) : recordingState === "processing" ? (
+              <>
+                <Loader size={14} className="spinner" />
+                <span>Transcribing...</span>
               </>
             ) : (
               <>
@@ -43,10 +57,8 @@ const Workspace = ({
           </button>
 
           <div className="status-indicator">
-            <div className={`status-dot ${isRecording ? "listening" : "idle"}`} />
-            <span className="status-text">
-              {isRecording ? "Listening..." : "Ready"}
-            </span>
+            <div className={`status-dot ${recordingState}`} />
+            <span className="status-text">{statusLabel}</span>
           </div>
         </div>
 
@@ -76,7 +88,7 @@ const Workspace = ({
           className="workspace-textarea"
           value={transcription}
           onChange={(e) => onSetTranscription(e.target.value)}
-          placeholder="Transcribed text will appear here..."
+          placeholder="Press your hotkey to start dictating..."
           spellCheck={false}
         />
       </div>

@@ -287,6 +287,7 @@ fn do_start_recording<R: Runtime>(app: &AppHandle<R>, state: &AppState) -> Resul
     emit_log(app, "info", "Starting recording...");
     let session = recorder::RecordingSession::start().map_err(|e| e.to_string())?;
     *guard = Some(session);
+    let _ = app.emit("recording_state", "recording");
     emit_log(app, "info", "Recording started");
     Ok(())
 }
@@ -304,6 +305,18 @@ async fn do_stop_and_transcribe<R: Runtime>(
         return Err("Not recording".into());
     };
 
+    let _ = app.emit("recording_state", "processing");
+    let result = do_transcription_pipeline(app, session).await;
+    let _ = app.emit("recording_state", "idle");
+    result
+}
+
+/// Inner pipeline: stop recording → transcribe → optionally refine.
+/// Separated so `do_stop_and_transcribe` can always emit "idle" on completion.
+async fn do_transcription_pipeline<R: Runtime>(
+    app: &AppHandle<R>,
+    session: recorder::RecordingSession,
+) -> Result<String, String> {
     emit_log(app, "info", "Stopping recording...");
     let wav_path = session.stop_and_save_wav().map_err(|e| e.to_string())?;
     emit_log(app, "info", format!("Saved WAV: {}", wav_path.display()));
@@ -345,7 +358,7 @@ async fn do_stop_and_transcribe<R: Runtime>(
             }
             Err(e) => {
                 emit_log(app, "error", format!("Refinement failed: {}. Using original transcript.", e));
-                Ok(text) // Return original text if refinement fails
+                Ok(text)
             }
         }
     } else {
