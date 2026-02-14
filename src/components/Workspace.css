@@ -1,11 +1,12 @@
 .workspace {
   flex: 1;
-  min-height: 0; /* critical in flex layouts */
+  min-height: 0;
   background: #09090b;
   display: flex;
   flex-direction: column;
 }
 
+/* Toolbar */
 .workspace-toolbar {
   height: 48px;
   border-bottom: 1px solid #27272a;
@@ -19,49 +20,62 @@
 .workspace-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
+.workspace-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Record button */
 .record-button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   padding: 6px 14px;
   border-radius: 8px;
   border: 1px solid;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .record-button.idle {
   background: #e4e4e7;
-  border-color: #e4e4e7;
-  color: black;
+  border-color: #d4d4d8;
+  color: #18181b;
 }
 
 .record-button.idle:hover {
-  background: white;
+  background: #ffffff;
+  border-color: #e4e4e7;
 }
 
 .record-button.recording {
-  background: rgba(153, 27, 27, 0.2);
-  border-color: rgba(153, 27, 27, 0.5);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
   color: #ef4444;
 }
 
+.record-button.recording:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Status indicator */
 .status-indicator {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 8px;
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  transition: background 0.2s ease;
 }
 
 .status-dot.idle {
@@ -70,58 +84,50 @@
 
 .status-dot.listening {
   background: #ef4444;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
-.status-dot.processing {
-  background: #f59e0b;
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .status-text {
   font-size: 12px;
-  font-family: 'SF Mono', Consolas, monospace;
   font-weight: 500;
   color: #71717a;
 }
 
+/* Toolbar action buttons (copy, clear) */
+.toolbar-action {
+  background: transparent;
+  border: none;
+  color: #52525b;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.toolbar-action:hover:not(:disabled) {
+  background: #27272a;
+  color: #d4d4d8;
+}
+
+.toolbar-action:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Transcription area */
 .workspace-content {
   flex: 1;
   padding: 16px;
   display: flex;
   flex-direction: column;
-}
-
-.workspace-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.workspace-title {
-  font-size: 10px;
-  font-weight: 600;
-  color: #52525b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.workspace-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.workspace-action {
-  font-size: 10px;
-  color: #52525b;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.workspace-action:hover {
-  color: #d4d4d8;
 }
 
 .workspace-textarea {
@@ -131,17 +137,17 @@
   border-radius: 8px;
   padding: 16px;
   color: #e4e4e7;
-  font-size: 14px;
+  font-size: 15px;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-  line-height: 1.5;
+  line-height: 1.6;
   resize: none;
 }
 
 .workspace-textarea:focus {
   outline: none;
-  border-color: #52525b;
+  border-color: #3f3f46;
 }
 
 .workspace-textarea::placeholder {
-  color: #27272a;
+  color: #3f3f46;
 }

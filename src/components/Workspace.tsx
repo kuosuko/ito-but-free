@@ -1,5 +1,5 @@
 import "./Workspace.css";
-import { Mic, Square, Activity } from "lucide-react";
+import { Mic, Square, Copy, Trash2 } from "lucide-react";
 
 interface WorkspaceProps {
   isRecording: boolean;
@@ -15,7 +15,7 @@ const Workspace = ({
   onSetTranscription,
 }: WorkspaceProps) => {
   const handleClear = () => onSetTranscription("");
-  
+
   const handleCopy = () => {
     navigator.clipboard.writeText(transcription);
   };
@@ -31,13 +31,13 @@ const Workspace = ({
           >
             {isRecording ? (
               <>
-                <Square size={14} fill="currentColor" />
-                <span>STOP</span>
+                <Square size={12} fill="currentColor" />
+                <span>Stop</span>
               </>
             ) : (
               <>
                 <Mic size={14} />
-                <span>RECORD</span>
+                <span>Record</span>
               </>
             )}
           </button>
@@ -45,34 +45,38 @@ const Workspace = ({
           <div className="status-indicator">
             <div className={`status-dot ${isRecording ? "listening" : "idle"}`} />
             <span className="status-text">
-              {isRecording ? "LISTENING" : "IDLE"}
+              {isRecording ? "Listening..." : "Ready"}
             </span>
           </div>
         </div>
+
+        <div className="workspace-toolbar-right">
+          <button
+            onClick={handleCopy}
+            className="toolbar-action"
+            title="Copy to clipboard"
+            disabled={!transcription}
+          >
+            <Copy size={14} />
+          </button>
+          <button
+            onClick={handleClear}
+            className="toolbar-action"
+            title="Clear"
+            disabled={!transcription}
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
-      {/* Content Area */}
+      {/* Transcription Area */}
       <div className="workspace-content">
-        <div className="workspace-header">
-          <div className="workspace-title">
-            <Activity size={12} />
-            <span>Buffer Preview</span>
-          </div>
-          <div className="workspace-actions">
-            <button onClick={handleClear} className="workspace-action">
-              Clear
-            </button>
-            <button onClick={handleCopy} className="workspace-action">
-              Copy
-            </button>
-          </div>
-        </div>
-
         <textarea
           className="workspace-textarea"
           value={transcription}
           onChange={(e) => onSetTranscription(e.target.value)}
-          placeholder="// Ready to transcribe..."
+          placeholder="Transcribed text will appear here..."
           spellCheck={false}
         />
       </div>
