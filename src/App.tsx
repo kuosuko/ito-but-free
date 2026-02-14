@@ -231,7 +231,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <TitleBar appName="GroqBara" version="0.1.0" />
+      <TitleBar appName="GroqBara" version="0.2.0" />
 
       <div className="content">
         <Sidebar
