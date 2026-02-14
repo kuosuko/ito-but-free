@@ -13,7 +13,7 @@ function App() {
   // Core states
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [transcription, setTranscription] = useState<string>("");
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<{ level: string; message: string; timestamp: string }[]>([]);
 
   // Settings states
   const [apiKey, setApiKey] = useState<string>("");
@@ -23,6 +23,9 @@ function App() {
   const [typingSpeed, setTypingSpeed] = useState<number>(0);
   const [fnKeyEnabled, setFnKeyEnabled] = useState<boolean>(false);
   const [hasAccessibilityPermission, setHasAccessibilityPermission] = useState<boolean>(false);
+  const [refineOutputEnabled, setRefineOutputEnabled] = useState<boolean>(false);
+  const [refinementPrompt, setRefinementPrompt] = useState<string>("");
+  const [refinementModel, setRefinementModel] = useState<string>("qwen/qwen3-32b");
 
   // Load initial state and setup listeners
   useEffect(() => {
@@ -31,8 +34,12 @@ function App() {
 
     (async () => {
       // Setup event listeners
-      unlistenLog = await listen("log", (event) => {
-        setLogs((prev) => [event.payload, ...prev].slice(0, 500));
+      unlistenLog = await listen<{ level: string; message: string }>("log", (event) => {
+        const entry = {
+          ...event.payload,
+          timestamp: new Date().toLocaleTimeString(),
+        };
+        setLogs((prev) => [entry, ...prev].slice(0, 500));
       });
 
       unlistenTx = await listen("transcription", async (event) => {
@@ -68,6 +75,15 @@ function App() {
         
         const hasAccess = await invoke<boolean>("check_accessibility_permission");
         setHasAccessibilityPermission(hasAccess);
+        
+        const refineEnabled = await invoke<boolean>("get_refine_output_enabled");
+        setRefineOutputEnabled(refineEnabled);
+        
+        const refinePrompt = await invoke<string>("get_refinement_prompt");
+        setRefinementPrompt(refinePrompt);
+        
+        const refineModel = await invoke<string>("get_refinement_model");
+        setRefinementModel(refineModel);
       } catch (err) {
         console.error("Failed to load settings:", err);
       }
@@ -162,6 +178,33 @@ function App() {
     }
   }
 
+  async function handleToggleRefineOutput(enabled: boolean) {
+    try {
+      await invoke("set_refine_output_enabled", { enabled });
+      setRefineOutputEnabled(enabled);
+    } catch (err) {
+      console.error("Failed to toggle refine output:", err);
+    }
+  }
+
+  async function handleSetRefinementPrompt(prompt: string) {
+    try {
+      await invoke("set_refinement_prompt", { prompt });
+      setRefinementPrompt(prompt);
+    } catch (err) {
+      console.error("Failed to set refinement prompt:", err);
+    }
+  }
+
+  async function handleSetRefinementModel(model: string) {
+    try {
+      await invoke("set_refinement_model", { model });
+      setRefinementModel(model);
+    } catch (err) {
+      console.error("Failed to set refinement model:", err);
+    }
+  }
+
   return (
     <div className="app-container">
       <TitleBar appName="GroqBara" version="0.1.0" />
@@ -182,6 +225,12 @@ function App() {
           onToggleFnKey={handleToggleFnKey}
           hasAccessibilityPermission={hasAccessibilityPermission}
           onRequestPermission={handleRequestAccessibilityPermission}
+          refineOutputEnabled={refineOutputEnabled}
+          onToggleRefineOutput={handleToggleRefineOutput}
+          refinementPrompt={refinementPrompt}
+          onSetRefinementPrompt={handleSetRefinementPrompt}
+          refinementModel={refinementModel}
+          onSetRefinementModel={handleSetRefinementModel}
         />
 
         <div className="center-panel">

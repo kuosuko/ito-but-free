@@ -2,8 +2,14 @@ import "./LogsPanel.css";
 import { Terminal } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+interface LogEntry {
+  level: string;
+  message: string;
+  timestamp: string;
+}
+
 interface LogsPanelProps {
-  logs: any[];
+  logs: LogEntry[];
   onClearLogs: () => void;
 }
 
@@ -22,26 +28,23 @@ const LogsPanel = ({ logs, onClearLogs }: LogsPanelProps) => {
           <span>Console</span>
         </div>
         <button onClick={onClearLogs} className="clear-button">
-          CLEAR
+          Clear
         </button>
       </div>
 
       <div className="logs-content">
         {logs.length === 0 && (
-          <span className="log-empty">No active events</span>
+          <span className="log-empty">No events yet</span>
         )}
-        {logs.map((log, i) => {
-          const logStr = typeof log === "string" ? log : JSON.stringify(log);
-          const timestamp = new Date().toLocaleTimeString();
-          return (
-            <div key={i} className="log-entry">
-              <span className="log-timestamp">[{timestamp}]</span>
-              <span className={`log-message ${logStr.includes("Error") ? "error" : ""}`}>
-                {logStr}
-              </span>
-            </div>
-          );
-        })}
+        {logs.map((log, i) => (
+          <div key={i} className="log-entry">
+            <span className="log-timestamp">{log.timestamp}</span>
+            <span className={`log-level ${log.level}`}>{log.level}</span>
+            <span className={`log-message ${log.level}`}>
+              {log.message}
+            </span>
+          </div>
+        ))}
         <div ref={logsEndRef} />
       </div>
     </div>

@@ -4,18 +4,18 @@
   border-top: 1px solid #27272a;
   display: flex;
   flex-direction: column;
-  font-family: 'SF Mono', Consolas, monospace;
+  font-family: "SF Mono", "Fira Code", Consolas, monospace;
 }
 
 .logs-header {
-  height: 28px;
-  padding: 0 12px;
+  height: 30px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #111113;
   border-bottom: 1px solid #27272a;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: #52525b;
   text-transform: uppercase;
@@ -25,33 +25,57 @@
 .logs-content {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 8px 10px;
   font-size: 11px;
 }
 
 .log-entry {
   display: flex;
   gap: 8px;
-  color: #a1a1aa;
-  margin-bottom: 4px;
+  align-items: baseline;
+  margin-bottom: 3px;
+  line-height: 1.4;
 }
 
 .log-empty {
-  color: #27272a;
+  color: #3f3f46;
+  font-style: italic;
   user-select: none;
 }
 
 .log-timestamp {
   color: #3f3f46;
   user-select: none;
+  flex-shrink: 0;
+}
+
+.log-level {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
+.log-level.info {
+  color: #52525b;
+}
+
+.log-level.error {
+  color: #ef4444;
+}
+
+.log-level.warn {
+  color: #f59e0b;
 }
 
 .log-message {
-  color: #d4d4d8;
+  color: #a1a1aa;
+  word-break: break-word;
 }
 
 .log-message.error {
-  color: #991b1b;
+  color: #fca5a5;
 }
 
 .clear-button {
@@ -60,9 +84,13 @@
   color: #3f3f46;
   font-size: 10px;
   cursor: pointer;
-  padding: 0;
+  padding: 2px 4px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .clear-button:hover {
   color: #71717a;
+  background: #1a1a1e;
 }
