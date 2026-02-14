@@ -16,6 +16,11 @@ function App() {
   const [transcription, setTranscription] = useState<string>("");
   const [logs, setLogs] = useState<{ level: string; message: string; timestamp: string }[]>([]);
 
+  // Push a log entry to the panel (for frontend-originated errors)
+  function addLog(level: string, message: string) {
+    setLogs((prev) => [{ level, message, timestamp: new Date().toLocaleTimeString() }, ...prev].slice(0, 500));
+  }
+
   // Settings states
   const [apiKey, setApiKey] = useState<string>("");
   const [hotkey, setHotkey] = useState<string>("CommandOrControl+Shift+R");
@@ -108,7 +113,7 @@ function App() {
         const text = await invoke<string>("stop_and_transcribe");
         setTranscription(text);
       } catch (err) {
-        console.error("Transcription failed:", err);
+        addLog("error", `Transcription failed: ${err}`);
       }
       setRecordingState("idle");
     } else if (recordingState === "idle") {
@@ -132,7 +137,7 @@ function App() {
       await invoke("set_hotkey", { hotkey: hk });
       setHotkey(hk);
     } catch (err) {
-      console.error("Failed to save hotkey:", err);
+      addLog("error", `Failed to set hotkey: ${err}`);
     }
   }
 
@@ -172,7 +177,7 @@ function App() {
       }
       setFnKeyEnabled(enabled);
     } catch (err) {
-      console.error("Failed to toggle Fn key:", err);
+      addLog("error", `Failed to toggle Fn key: ${err}`);
     }
   }
 
