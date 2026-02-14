@@ -8,8 +8,6 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-mod auto_type;
-mod fn_key_listener;
 pub mod platform;
 mod recorder;
 mod settings;

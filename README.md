@@ -74,16 +74,29 @@ if p.is_accessibility_trusted() {
 }
 ```
 
-### Windows Implementation Guide
+### Windows Implementation Status
 
-To add Windows support, implement the stubs in `src-tauri/src/platform/windows.rs`:
+Initial Windows support is implemented via the platform layer in
+`src-tauri/src/platform/windows.rs`:
 
-1. **Key Listening**: Use `SetWindowsHookEx` with `WH_KEYBOARD_LL` and a message pump thread.
-2. **Text Injection**: Use `SendInput` with `INPUT_KEYBOARD` and `KEYEVENTF_UNICODE`.
-3. **Audio Capture**: The `cpal` crate should work—may need `CoInitializeEx` on the recording thread.
-4. **Suggested crate**: [`windows`](https://crates.io/crates/windows) (official Microsoft bindings).
+1. **Key Listening**: Implemented with `SetWindowsHookExW(WH_KEYBOARD_LL, ...)` on a
+   background thread with a message pump. The default trigger key is **Right Alt**
+   (`VK_RMENU`), with **F24** supported as an alternative (for users who bind it
+   via tools like AutoHotkey).
+2. **Text Injection**: Implemented using `SendInput` with `INPUT_KEYBOARD` and
+   `KEYEVENTF_UNICODE`, so arbitrary Unicode text can be auto-typed into the
+   focused application.
+3. **Audio Capture**: Implemented using the same `cpal`-based pipeline as macOS,
+   writing a temporary WAV file that feeds the Groq transcription API.
+4. **Crate**: Uses the official [`windows`](https://crates.io/crates/windows)
+   bindings for Win32 APIs.
 
-See `windows.rs` for detailed implementation notes and code snippets.
+Limitations / Notes:
+- There is currently **no UI to change the Windows trigger key**; it is hard-coded
+  to Right Alt / F24. The global hotkey (default `F13`) remains fully configurable
+  and is the recommended trigger mechanism on Windows.
+- Unlike macOS, there is no explicit Accessibility permission prompt; the
+  "Accessibility" checks in the app are effectively no-ops on Windows.
 
 ---
 

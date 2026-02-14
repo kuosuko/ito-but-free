@@ -27,6 +27,18 @@ pub struct Settings {
     #[serde(default)]
     pub type_speed_ms: Option<u64>,
 
+    /// Whether we should refine the output using Qwen model
+    #[serde(default)]
+    pub refine_output_enabled: Option<bool>,
+
+    /// Custom prompt for refining the output
+    #[serde(default)]
+    pub refinement_prompt: Option<String>,
+
+    /// Model to use for refinement
+    #[serde(default)]
+    pub refinement_model: Option<String>,
+
     // ---- Legacy fields kept for backwards compatibility (do not write new values) ----
     /// Legacy: Automatically insert the transcription.
     #[serde(default, skip_serializing)]
@@ -138,4 +150,44 @@ pub fn set_type_speed_ms<R: Runtime>(app: &AppHandle<R>, ms: u64) -> Result<(), 
 
 pub fn get_type_speed_ms<R: Runtime>(app: &AppHandle<R>) -> Result<Option<u64>, String> {
     Ok(load(app)?.type_speed_ms)
+}
+
+pub fn set_refine_output_enabled<R: Runtime>(app: &AppHandle<R>, enabled: bool) -> Result<(), String> {
+    let mut s = load(app)?;
+    s.refine_output_enabled = Some(enabled);
+    save(app, &s)
+}
+
+pub fn get_refine_output_enabled<R: Runtime>(app: &AppHandle<R>) -> Result<Option<bool>, String> {
+    Ok(load(app)?.refine_output_enabled)
+}
+
+pub fn set_refinement_prompt<R: Runtime>(app: &AppHandle<R>, prompt: String) -> Result<(), String> {
+    let mut s = load(app)?;
+    let trimmed = prompt.trim().to_string();
+    if trimmed.is_empty() {
+        s.refinement_prompt = None;
+    } else {
+        s.refinement_prompt = Some(trimmed);
+    }
+    save(app, &s)
+}
+
+pub fn get_refinement_prompt<R: Runtime>(app: &AppHandle<R>) -> Result<Option<String>, String> {
+    Ok(load(app)?.refinement_prompt)
+}
+
+pub fn set_refinement_model<R: Runtime>(app: &AppHandle<R>, model: String) -> Result<(), String> {
+    let mut s = load(app)?;
+    let trimmed = model.trim().to_string();
+    if trimmed.is_empty() {
+        s.refinement_model = None;
+    } else {
+        s.refinement_model = Some(trimmed);
+    }
+    save(app, &s)
+}
+
+pub fn get_refinement_model<R: Runtime>(app: &AppHandle<R>) -> Result<Option<String>, String> {
+    Ok(load(app)?.refinement_model)
 }
