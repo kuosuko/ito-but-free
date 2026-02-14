@@ -117,8 +117,16 @@ function App() {
       }
       setRecordingState("idle");
     } else if (recordingState === "idle") {
-      await invoke("start_recording");
-      setRecordingState("recording");
+      if (!apiKey.trim()) {
+        addLog("warn", "Set your Groq API key in Settings before recording");
+        return;
+      }
+      try {
+        await invoke("start_recording");
+        setRecordingState("recording");
+      } catch (err) {
+        addLog("error", `Failed to start recording: ${err}`);
+      }
     }
     // If "processing", ignore clicks
   }
