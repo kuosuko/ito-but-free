@@ -43,10 +43,6 @@ pub struct Settings {
     /// Legacy: Automatically insert the transcription.
     #[serde(default, skip_serializing)]
     pub auto_insert: Option<bool>,
-
-    /// Legacy: How to insert the transcription.
-    #[serde(default, skip_serializing)]
-    pub insert_mode: Option<String>,
 }
 
 fn settings_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String> {

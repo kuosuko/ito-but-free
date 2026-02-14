@@ -101,13 +101,25 @@ impl Platform for MacOSPlatform {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[repr(C)]
-struct CFRunLoopSource;
+#[allow(non_camel_case_types)]
+struct CFRunLoopSource {
+    _opaque: [u8; 0],
+}
 #[repr(C)]
-struct CFMachPort;
+#[allow(non_camel_case_types)]
+struct CFMachPort {
+    _opaque: [u8; 0],
+}
 #[repr(C)]
-struct CFRunLoop;
+#[allow(non_camel_case_types)]
+struct CFRunLoop {
+    _opaque: [u8; 0],
+}
 #[repr(C)]
-struct CGEvent;
+#[allow(non_camel_case_types)]
+struct CGEvent {
+    _opaque: [u8; 0],
+}
 
 type CGEventTapCallBack = extern "C" fn(
     proxy: *mut c_void,
