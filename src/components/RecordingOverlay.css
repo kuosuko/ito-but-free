@@ -1,4 +1,4 @@
-/* Transparent background for the overlay window */
+/* Default: transparent background (works on Windows with transparent window) */
 html, body {
   margin: 0;
   padding: 0;
@@ -6,6 +6,21 @@ html, body {
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* macOS fallback: solid dark background (no transparent window API) */
+html.macos, html.macos body {
+  background: #09090b;
+}
+
+/* macOS: the window IS the pill, so fill it and drop extra border/shadow */
+html.macos .overlay-pill {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0 12px;
 }
 
 .overlay-container {

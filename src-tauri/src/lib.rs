@@ -774,32 +774,48 @@ pub fn run() {
             app.manage(tray);
 
             // ---- Floating recording overlay window ----
-            match WebviewWindowBuilder::new(
+            let mut overlay_builder = WebviewWindowBuilder::new(
                 app,
                 "overlay",
                 WebviewUrl::App("src/overlay.html".into()),
             )
             .title("Recording")
-            .inner_size(300.0, 60.0)
             .resizable(false)
             .decorations(false)
-            .transparent(true)
-            .shadow(false)
             .always_on_top(true)
             .skip_taskbar(true)
             .visible(false)
-            .focused(false)
-            .build()
+            .focused(false);
+
+            // Windows: transparent + no shadow → pill floats with no border.
+            // macOS: transparent requires private API, so use a solid dark window instead.
+            #[cfg(target_os = "windows")]
             {
+                overlay_builder = overlay_builder
+                    .inner_size(300.0, 60.0)
+                    .transparent(true)
+                    .shadow(false);
+            }
+            #[cfg(target_os = "macos")]
+            {
+                overlay_builder = overlay_builder
+                    .inner_size(200.0, 40.0);
+            }
+
+            match overlay_builder.build() {
                 Ok(w) => {
-                    // Position at bottom-center of the primary monitor
+                    #[cfg(target_os = "windows")]
+                    let (win_w, win_h) = (300.0, 60.0);
+                    #[cfg(target_os = "macos")]
+                    let (win_w, win_h) = (200.0, 40.0);
+
                     if let Ok(Some(monitor)) = w.primary_monitor() {
                         let screen = monitor.size();
                         let scale = monitor.scale_factor();
                         let logical_w = screen.width as f64 / scale;
                         let logical_h = screen.height as f64 / scale;
-                        let x = (logical_w - 300.0) / 2.0;
-                        let y = logical_h - 60.0 - 40.0; // 40px above bottom edge
+                        let x = (logical_w - win_w) / 2.0;
+                        let y = logical_h - win_h - 48.0;
                         let _ = w.set_position(tauri::Position::Logical(
                             tauri::LogicalPosition::new(x, y),
                         ));

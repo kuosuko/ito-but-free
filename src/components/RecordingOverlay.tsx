@@ -7,6 +7,13 @@ type RecordingState = "idle" | "recording" | "processing";
 const RecordingOverlay = () => {
   const [state, setState] = useState<RecordingState>("recording");
 
+  // macOS: add class so CSS can apply solid dark background (no transparent window API)
+  useEffect(() => {
+    if (navigator.platform.startsWith("Mac")) {
+      document.documentElement.classList.add("macos");
+    }
+  }, []);
+
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
