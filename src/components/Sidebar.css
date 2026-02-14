@@ -85,6 +85,51 @@
   color: #d4d4d8;
 }
 
+/* Permission banner */
+.permission-banner {
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.permission-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.permission-status.warning {
+  color: #fbbf24;
+}
+
+.permission-status.granted {
+  color: #4ade80;
+  font-size: 12px;
+}
+
+.permission-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.permission-status-text strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.permission-status-text span {
+  font-size: 11px;
+  color: #a1a1aa;
+}
+
+.permission-hint {
+  font-size: 10px;
+  color: #71717a;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
 /* Permission button */
 .permission-button {
   width: 100%;
@@ -98,7 +143,7 @@
   padding: 7px;
   margin-top: 10px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   border-radius: 6px;
   transition: background 0.15s ease;

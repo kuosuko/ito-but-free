@@ -1,5 +1,5 @@
 import "./Sidebar.css";
-import { Settings, Key, Eye, EyeOff } from "lucide-react";
+import { Settings, Eye, EyeOff, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 
 interface SidebarProps {
@@ -53,11 +53,44 @@ const Sidebar = ({
   const [localRefinementModel, setLocalRefinementModel] = useState(refinementModel);
   const [showKey, setShowKey] = useState(false);
 
+  const needsAccessibility = autoTypeEnabled || fnKeyEnabled;
+
   return (
     <div className="sidebar">
       <h2 className="sidebar-header">
         <Settings className="icon" size={14} /> Settings
       </h2>
+
+      {/* Accessibility Permission Status */}
+      {needsAccessibility && !hasAccessibilityPermission && (
+        <div className="sidebar-group permission-banner">
+          <div className="permission-status warning">
+            <ShieldAlert size={16} />
+            <div className="permission-status-text">
+              <strong>Accessibility required</strong>
+              <span>Needed for {fnKeyEnabled && autoTypeEnabled ? "Fn key & auto-type" : fnKeyEnabled ? "Fn key listening" : "auto-type"}</span>
+            </div>
+          </div>
+          <button
+            className="permission-button"
+            onClick={onRequestPermission}
+          >
+            Grant Permission
+          </button>
+          <p className="permission-hint">
+            After granting, restart the app with Cmd+Q.
+          </p>
+        </div>
+      )}
+
+      {needsAccessibility && hasAccessibilityPermission && (
+        <div className="sidebar-group">
+          <div className="permission-status granted">
+            <ShieldCheck size={14} />
+            <span>Accessibility granted</span>
+          </div>
+        </div>
+      )}
 
       {/* Groq API */}
       <div className="sidebar-group">
@@ -131,7 +164,7 @@ const Sidebar = ({
         </div>
       </div>
 
-      {/* Output Injection */}
+      {/* Output */}
       <div className="sidebar-group">
         <h3>Output</h3>
 
@@ -158,15 +191,6 @@ const Sidebar = ({
               onChange={(e) => onSetTypingSpeed(Number(e.target.value))}
               className="slider"
             />
-
-            {!hasAccessibilityPermission && (
-              <button
-                className="permission-button"
-                onClick={onRequestPermission}
-              >
-                <Key size={12} /> Grant Accessibility Permission
-              </button>
-            )}
           </>
         )}
       </div>
