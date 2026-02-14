@@ -1,58 +1,24 @@
 .title-bar {
-  height: 32px;
+  height: 38px;
   background: #09090b;
   border-bottom: 1px solid #27272a;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 80px; /* leave room for native traffic lights */
   -webkit-app-region: drag;
   user-select: none;
 }
 
-.title-bar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.title-bar-left span {
-  font-size: 12px;
-  font-weight: 700;
-  color: #e4e4e7;
-  letter-spacing: -0.02em;
+.title-bar-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #a1a1aa;
+  letter-spacing: -0.01em;
 }
 
 .title-bar-version {
   font-size: 10px;
   color: #52525b;
-  padding: 2px 6px;
-  background: #27272a;
-  border-radius: 2px;
-}
-
-.title-bar-controls {
-  display: flex;
-  gap: 8px;
-  -webkit-app-region: no-drag;
-}
-
-.title-bar-button {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #27272a;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.title-bar-button:hover {
-  background: #3f3f46;
-}
-
-.title-bar-button.close:hover {
-  background: rgba(153, 27, 27, 0.5);
 }

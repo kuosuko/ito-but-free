@@ -1,9 +1,10 @@
 body {
-  font-family: "Fira Code", monospace;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   background-color: #18181b;
   color: #e5e5e5;
   margin: 0;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 .app-container {
