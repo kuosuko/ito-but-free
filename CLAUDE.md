@@ -7,7 +7,7 @@ GroqBara is a macOS global-hotkey dictation/transcription app. User presses hotk
 - **Frontend**: React + TypeScript (Vite), in `src/`
 - **Backend**: Rust (Tauri v2), in `src-tauri/src/`
 - **Platform layer**: `platform/{mod,macos,windows}.rs` — abstracts accessibility, Fn key listening, text injection
-- **Recording**: `recorder.rs` — cpal-based mic capture (runs in dedicated thread because cpal::Stream isn't Send on macOS)
+- **Recording**: `platform/macos.rs::RecordingSession` — cpal-based mic capture via platform abstraction (runs in dedicated thread because cpal::Stream isn't Send on macOS)
 - **Transcription**: `transcribe.rs` — Groq API (Whisper + optional LLM refinement)
 - **Settings**: `settings.rs` — JSON file in app config dir
 
@@ -24,6 +24,7 @@ GroqBara is a macOS global-hotkey dictation/transcription app. User presses hotk
 5. **Don't break the hotkey/recording pipeline** — it's the core UX loop.
 
 ## Known Pitfalls
-- `recorder.rs` and `platform/macos.rs::RecordingSession` are duplicated; `lib.rs` uses `recorder.rs` directly. The platform version's `start_audio_capture()` is currently unused.
-- Tauri command names must match exactly between Rust (`#[tauri::command]` fn name) and TypeScript (`invoke("name")`).
+- Tauri command names must match exactly between Rust (`#[tauri::command]` fn name) and TypeScript (`invoke("name")`). A mismatch silently fails.
 - Settings are loaded from disk on every read (no in-memory cache) — acceptable for the current scale but would need caching if called frequently.
+- Sidebar inputs use local state (for edit-on-blur). The `useEffect` sync pattern keeps them in sync with async prop updates.
+- The `recording_state` event drives the three-state UI (idle/recording/processing). Both backend and frontend emit these for consistency.
