@@ -1,6 +1,6 @@
 import "./Sidebar.css";
 import { Settings, Eye, EyeOff, ShieldCheck, ShieldAlert } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SidebarProps {
   apiKey: string;
@@ -52,6 +52,12 @@ const Sidebar = ({
   const [localRefinementPrompt, setLocalRefinementPrompt] = useState(refinementPrompt);
   const [localRefinementModel, setLocalRefinementModel] = useState(refinementModel);
   const [showKey, setShowKey] = useState(false);
+
+  // Sync local state when props change (e.g., after async settings load)
+  useEffect(() => setLocalApiKey(apiKey), [apiKey]);
+  useEffect(() => setLocalHotkey(hotkey), [hotkey]);
+  useEffect(() => setLocalRefinementPrompt(refinementPrompt), [refinementPrompt]);
+  useEffect(() => setLocalRefinementModel(refinementModel), [refinementModel]);
 
   const needsAccessibility = autoTypeEnabled || fnKeyEnabled;
 
