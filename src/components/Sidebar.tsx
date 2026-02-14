@@ -1,5 +1,5 @@
 import "./Sidebar.css";
-import { Settings, Save, Key } from "lucide-react";
+import { Settings, Key, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
 interface SidebarProps {
@@ -17,6 +17,12 @@ interface SidebarProps {
   onToggleFnKey: (enabled: boolean) => void;
   hasAccessibilityPermission: boolean;
   onRequestPermission: () => void;
+  refineOutputEnabled: boolean;
+  onToggleRefineOutput: (enabled: boolean) => void;
+  refinementPrompt: string;
+  onSetRefinementPrompt: (prompt: string) => void;
+  refinementModel: string;
+  onSetRefinementModel: (model: string) => void;
 }
 
 const Sidebar = ({
@@ -34,20 +40,28 @@ const Sidebar = ({
   onToggleFnKey,
   hasAccessibilityPermission,
   onRequestPermission,
+  refineOutputEnabled,
+  onToggleRefineOutput,
+  refinementPrompt,
+  onSetRefinementPrompt,
+  refinementModel,
+  onSetRefinementModel,
 }: SidebarProps) => {
   const [localApiKey, setLocalApiKey] = useState(apiKey);
   const [localHotkey, setLocalHotkey] = useState(hotkey);
+  const [localRefinementPrompt, setLocalRefinementPrompt] = useState(refinementPrompt);
+  const [localRefinementModel, setLocalRefinementModel] = useState(refinementModel);
   const [showKey, setShowKey] = useState(false);
 
   return (
     <div className="sidebar">
       <h2 className="sidebar-header">
-        <Settings className="icon" size={14} /> Configuration
+        <Settings className="icon" size={14} /> Settings
       </h2>
 
       {/* Groq API */}
       <div className="sidebar-group">
-        <h3>Groq API</h3>
+        <h3>Groq API Key</h3>
         <div className="input-group">
           <input
             className="input"
@@ -56,34 +70,31 @@ const Sidebar = ({
             value={localApiKey}
             onChange={(e) => setLocalApiKey(e.target.value)}
             onBlur={() => onSaveApiKey(localApiKey)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSaveApiKey(localApiKey);
+            }}
           />
           <button
             className="icon-button"
             onClick={() => setShowKey(!showKey)}
-            title={showKey ? "Hide" : "Show"}
+            title={showKey ? "Hide API key" : "Show API key"}
           >
-            {showKey ? "👁️" : "🔒"}
+            {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
         </div>
-        <button
-          className="save-button"
-          onClick={() => onSaveApiKey(localApiKey)}
-        >
-          <Save size={12} /> Save Key
-        </button>
       </div>
 
       {/* Input Trigger */}
       <div className="sidebar-group">
         <h3>Input Trigger</h3>
-        
+
         <label className="checkbox-label">
           <input
             type="checkbox"
             checked={fnKeyEnabled}
             onChange={(e) => onToggleFnKey(e.target.checked)}
           />
-          Use Fn Key
+          Use Fn key
         </label>
 
         {!fnKeyEnabled && (
@@ -95,51 +106,48 @@ const Sidebar = ({
               value={localHotkey}
               onChange={(e) => setLocalHotkey(e.target.value)}
               onBlur={() => onSaveHotkey(localHotkey)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onSaveHotkey(localHotkey);
+              }}
               placeholder="CommandOrControl+Shift+R"
             />
           </>
         )}
 
         <label className="label">Trigger Mode</label>
-        <div className="radio-group">
-          <label className="radio-label">
-            <input
-              type="radio"
-              value="hold"
-              checked={triggerMode === "hold"}
-              onChange={() => onSetTriggerMode("hold")}
-            />
+        <div className="segmented-control">
+          <button
+            className={`segment ${triggerMode === "hold" ? "active" : ""}`}
+            onClick={() => onSetTriggerMode("hold")}
+          >
             Hold
-          </label>
-          <label className="radio-label">
-            <input
-              type="radio"
-              value="toggle"
-              checked={triggerMode === "toggle"}
-              onChange={() => onSetTriggerMode("toggle")}
-            />
+          </button>
+          <button
+            className={`segment ${triggerMode === "toggle" ? "active" : ""}`}
+            onClick={() => onSetTriggerMode("toggle")}
+          >
             Toggle
-          </label>
+          </button>
         </div>
       </div>
 
       {/* Output Injection */}
       <div className="sidebar-group">
-        <h3>Output Injection</h3>
-        
+        <h3>Output</h3>
+
         <label className="checkbox-label">
           <input
             type="checkbox"
             checked={autoTypeEnabled}
             onChange={(e) => onToggleAutoType(e.target.checked)}
           />
-          Auto-Type Result
+          Auto-type into active app
         </label>
 
         {autoTypeEnabled && (
           <>
             <label className="label">
-              Typing Speed: {typingSpeed}ms
+              Typing delay: {typingSpeed}ms
             </label>
             <input
               type="range"
@@ -156,9 +164,47 @@ const Sidebar = ({
                 className="permission-button"
                 onClick={onRequestPermission}
               >
-                <Key size={12} /> Grant Accessibility
+                <Key size={12} /> Grant Accessibility Permission
               </button>
             )}
+          </>
+        )}
+      </div>
+
+      {/* Refinement Settings */}
+      <div className="sidebar-group">
+        <h3>Refinement</h3>
+
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={refineOutputEnabled}
+            onChange={(e) => onToggleRefineOutput(e.target.checked)}
+          />
+          Refine with LLM (Groq)
+        </label>
+
+        {refineOutputEnabled && (
+          <>
+            <label className="label">Model</label>
+            <input
+              className="input"
+              type="text"
+              value={localRefinementModel}
+              onChange={(e) => setLocalRefinementModel(e.target.value)}
+              onBlur={() => onSetRefinementModel(localRefinementModel)}
+              placeholder="qwen/qwen3-32b"
+            />
+
+            <label className="label">Prompt</label>
+            <textarea
+              className="input textarea"
+              rows={3}
+              value={localRefinementPrompt}
+              onChange={(e) => setLocalRefinementPrompt(e.target.value)}
+              onBlur={() => onSetRefinementPrompt(localRefinementPrompt)}
+              placeholder="Style or language preferences (e.g., formal tone, Traditional Chinese)"
+            />
           </>
         )}
       </div>
