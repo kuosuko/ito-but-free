@@ -9,7 +9,6 @@ use tauri::{
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 pub mod platform;
-mod recorder;
 mod settings;
 mod transcribe;
 
@@ -27,7 +26,7 @@ impl FnKeyListenerWrapper {
 }
 
 struct AppState {
-    session: std::sync::Mutex<Option<recorder::RecordingSession>>,
+    session: std::sync::Mutex<Option<Box<dyn platform::RecordingHandle>>>,
     hotkey: std::sync::Mutex<Option<Shortcut>>,
     fn_listener: std::sync::Mutex<Option<FnKeyListenerWrapper>>,
 }
@@ -285,7 +284,7 @@ fn do_start_recording<R: Runtime>(app: &AppHandle<R>, state: &AppState) -> Resul
     }
 
     emit_log(app, "info", "Starting recording...");
-    let session = recorder::RecordingSession::start().map_err(|e| e.to_string())?;
+    let session = platform::current().start_audio_capture()?;
     *guard = Some(session);
     let _ = app.emit("recording_state", "recording");
     emit_log(app, "info", "Recording started");
@@ -315,10 +314,10 @@ async fn do_stop_and_transcribe<R: Runtime>(
 /// Separated so `do_stop_and_transcribe` can always emit "idle" on completion.
 async fn do_transcription_pipeline<R: Runtime>(
     app: &AppHandle<R>,
-    session: recorder::RecordingSession,
+    session: Box<dyn platform::RecordingHandle>,
 ) -> Result<String, String> {
     emit_log(app, "info", "Stopping recording...");
-    let wav_path = session.stop_and_save_wav().map_err(|e| e.to_string())?;
+    let wav_path = session.stop_and_save_wav()?;
     emit_log(app, "info", format!("Saved WAV: {}", wav_path.display()));
 
     // API key resolution: settings.json > env var
