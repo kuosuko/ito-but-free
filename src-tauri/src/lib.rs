@@ -318,12 +318,41 @@ async fn do_stop_and_transcribe<R: Runtime>(
         .ok_or_else(|| "Missing Groq API key. Set it in the app settings.".to_string())?;
 
     emit_log(app, "info", "Transcribing with Groq...");
-    let text = transcribe::transcribe_groq(wav_path, api_key)
+    let text = transcribe::transcribe_groq(wav_path, api_key.clone())
         .await
         .map_err(|e| e.to_string())?;
     emit_log(app, "info", "Transcription completed");
 
-    Ok(text)
+    // Check if refinement is enabled
+    let refine_enabled = settings::get_refine_output_enabled(app)
+        .ok()
+        .flatten()
+        .unwrap_or(false);
+
+    if refine_enabled {
+        emit_log(app, "info", "Refining transcription with Qwen model...");
+        let custom_prompt = settings::get_refinement_prompt(app)
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+        let model = settings::get_refinement_model(app)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| "qwen/qwen3-32b".to_string());
+
+        match transcribe::refine_transcript(api_key, text.clone(), custom_prompt, model).await {
+            Ok(refined_text) => {
+                emit_log(app, "info", "Refinement completed successfully");
+                Ok(refined_text)
+            }
+            Err(e) => {
+                emit_log(app, "error", format!("Refinement failed: {}. Using original transcript.", e));
+                Ok(text) // Return original text if refinement fails
+            }
+        }
+    } else {
+        Ok(text)
+    }
 }
 
 #[tauri::command]
@@ -421,6 +450,36 @@ fn get_type_speed_ms(app: AppHandle) -> Result<u64, String> {
 #[tauri::command]
 fn set_type_speed_ms(app: AppHandle, ms: u64) -> Result<(), String> {
     settings::set_type_speed_ms(&app, ms)
+}
+
+#[tauri::command]
+fn set_refine_output_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
+    settings::set_refine_output_enabled(&app, enabled)
+}
+
+#[tauri::command]
+fn get_refine_output_enabled(app: AppHandle) -> Result<bool, String> {
+    Ok(settings::get_refine_output_enabled(&app)?.unwrap_or(false))
+}
+
+#[tauri::command]
+fn set_refinement_prompt(app: AppHandle, prompt: String) -> Result<(), String> {
+    settings::set_refinement_prompt(&app, prompt)
+}
+
+#[tauri::command]
+fn get_refinement_prompt(app: AppHandle) -> Result<String, String> {
+    Ok(settings::get_refinement_prompt(&app)?.unwrap_or_default())
+}
+
+#[tauri::command]
+fn set_refinement_model(app: AppHandle, model: String) -> Result<(), String> {
+    settings::set_refinement_model(&app, model)
+}
+
+#[tauri::command]
+fn get_refinement_model(app: AppHandle) -> Result<String, String> {
+    Ok(settings::get_refinement_model(&app)?.unwrap_or_else(|| "qwen/qwen3-32b".to_string()))
 }
 
 #[tauri::command]
@@ -556,7 +615,7 @@ pub fn run() {
             register_hotkey(&app_handle, state.inner(), &hotkey_str)?;
 
             // ---- Tray menu with Tauri v2 API ----
-            let show_item = MenuItemBuilder::with_id("show", "Show GroqTranscriber").build(app)?;
+            let show_item = MenuItemBuilder::with_id("show", "Show GroqBara").build(app)?;
             let hide_item = MenuItemBuilder::with_id("hide", "Hide").build(app)?;
             let sep1 = PredefinedMenuItem::separator(app)?;
             let start_item = MenuItemBuilder::with_id("start", "Start recording").build(app)?;
@@ -685,6 +744,12 @@ pub fn run() {
             set_auto_type_enabled,
             get_type_speed_ms,
             set_type_speed_ms,
+            set_refine_output_enabled,
+            get_refine_output_enabled,
+            set_refinement_prompt,
+            get_refinement_prompt,
+            set_refinement_model,
+            get_refinement_model,
             write_clipboard,
             type_text,
             accessibility_status,
