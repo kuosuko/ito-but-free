@@ -77,10 +77,7 @@ function App() {
         const speed = await invoke<number>("get_type_speed_ms");
         setTypingSpeed(speed);
         
-        const fnEnabled = await invoke<boolean>("fn_key_listening_status");
-        setFnKeyEnabled(fnEnabled);
-        
-        const hasAccess = await invoke<boolean>("check_accessibility_permission");
+        const hasAccess = await invoke<boolean>("accessibility_status");
         setHasAccessibilityPermission(hasAccess);
         
         const refineEnabled = await invoke<boolean>("get_refine_output_enabled");
@@ -181,10 +178,10 @@ function App() {
 
   async function handleRequestAccessibilityPermission() {
     try {
-      await invoke("request_accessibility_permission");
+      await invoke("request_accessibility");
       // Recheck after a short delay
       setTimeout(async () => {
-        const hasAccess = await invoke<boolean>("check_accessibility_permission");
+        const hasAccess = await invoke<boolean>("accessibility_status");
         setHasAccessibilityPermission(hasAccess);
       }, 500);
     } catch (err) {
