@@ -1,5 +1,6 @@
 import "./Workspace.css";
 import { Mic, Square, Copy, Trash2, Loader } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
 type RecordingState = "idle" | "recording" | "processing";
 
@@ -10,23 +11,52 @@ interface WorkspaceProps {
   onSetTranscription: (text: string) => void;
 }
 
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 const Workspace = ({
   recordingState,
   onToggleRecording,
   transcription,
   onSetTranscription,
 }: WorkspaceProps) => {
+  const [elapsed, setElapsed] = useState(0);
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (recordingState === "recording") {
+      setElapsed(0);
+      intervalRef.current = window.setInterval(() => {
+        setElapsed((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [recordingState]);
+
   const handleClear = () => onSetTranscription("");
 
   const handleCopy = () => {
     navigator.clipboard.writeText(transcription);
   };
 
-  const statusLabel = {
-    idle: "Ready",
-    recording: "Listening...",
-    processing: "Transcribing...",
-  }[recordingState];
+  const statusLabel =
+    recordingState === "recording"
+      ? formatDuration(elapsed)
+      : recordingState === "processing"
+        ? "Transcribing..."
+        : "Ready";
 
   return (
     <div className="workspace">
