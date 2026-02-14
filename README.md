@@ -1,27 +1,34 @@
 <div align="center">
-  <img src="assets/icon.png" alt="ito-but-free icon" width="120" />
+  <img src="assets/icon.png" alt="GroqBara icon" width="120" />
 
-  <h1>ito-but-free</h1>
+  <h1>GroqBara (ito-but-free)</h1>
 
   <p>
-    A macOS speech-to-text app — Ito, but BYOK (bring your own key). Free.
+    A cross-platform speech-to-text app — Ito, but BYOK (bring your own key). Free.
   </p>
 
   <p>
-    <em>
-      README drafted by a robot butler (Clawdbot) under strict instructions.
-      If anything looks too confident, it was probably hallucinating.
-    </em>
+    <strong>macOS</strong> &nbsp;·&nbsp; <strong>Windows</strong>
   </p>
 </div>
 
-## Status
-Early release / WIP.
-
 ## Features
-- Push-to-talk / hotkey trigger (including Fn-key mode)
-- Transcribe speech → text
-- Optional auto-type (requires macOS Accessibility permission)
+
+- **Push-to-talk / hotkey trigger** — Hold or toggle a global hotkey to record
+- **Fn key mode** (macOS) — Use the Fn key as the trigger
+- **Groq Whisper transcription** — Fast cloud-based speech-to-text
+- **Auto-type** — Automatically types the result into the focused app
+- **LLM refinement** — Optionally refine transcripts with a Groq-hosted LLM
+- **Mic gain boost** — Amplify quiet microphone input (0.5x–3.0x)
+- **Floating recording indicator** — Always-on-top overlay shows recording/transcribing status
+- **System tray** — Control recording from the tray icon
+
+## Getting Started
+
+1. Get a free API key from [Groq Console](https://console.groq.com/)
+2. Download the latest release for your platform
+3. Paste your API key in Settings
+4. Press the hotkey (default: `Ctrl+Space` on Windows, `F13` on macOS) and speak
 
 ## Development
 
@@ -36,67 +43,45 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-Note: DMG bundling may fail on some setups; the signed `.app` bundle can still be zipped and shared.
+Produces:
+- **macOS**: `.dmg` and `.app` bundle
+- **Windows**: `.msi` and `.exe` (NSIS) installer
 
----
-
-## Platform Abstraction Layer
-
-The app uses a platform abstraction layer (`src-tauri/src/platform/`) to isolate OS-specific code. This makes it feasible to add Windows (or other platform) support in the future.
+## Platform Details
 
 ### Architecture
 
 ```
-src-tauri/src/platform/
-├── mod.rs      # Platform trait + facade (current() function)
-├── macos.rs    # macOS implementation (CGEventTap, AX APIs)
-└── windows.rs  # Windows stubs with TODO notes
+src/                    # React + TypeScript frontend
+src-tauri/src/
+├── lib.rs              # Tauri commands, hotkey registration, tray menu
+├── settings.rs         # JSON settings persistence
+├── transcribe.rs       # Groq API (Whisper + LLM refinement)
+└── platform/
+    ├── mod.rs          # Platform trait + facade
+    ├── macos.rs        # macOS: CGEventTap, AX APIs, CoreAudio
+    └── windows.rs      # Windows: WH_KEYBOARD_LL, SendInput, WASAPI
 ```
 
-The `Platform` trait provides:
+### Platform Trait
 
-| Capability | Description | macOS API | Windows API (TODO) |
-|------------|-------------|-----------|-------------------|
-| `is_accessibility_trusted()` | Check if app has permissions | `AXIsProcessTrusted` | N/A (generally allowed) |
-| `request_accessibility_permission()` | Prompt for permissions | `AXIsProcessTrustedWithOptions` | N/A |
-| `start_fn_key_listener()` | Listen for Fn key press/release | `CGEventTap` | `SetWindowsHookEx(WH_KEYBOARD_LL)` |
-| `type_text()` | Inject text into focused app | `CGEventCreateKeyboardEvent` | `SendInput` with `KEYEVENTF_UNICODE` |
-| `start_audio_capture()` | Record from microphone | `cpal` (CoreAudio) | `cpal` (WASAPI) |
+| Capability | macOS | Windows |
+|---|---|---|
+| Accessibility check | `AXIsProcessTrusted` | No-op (always granted) |
+| Fn/trigger key listener | `CGEventTap` (Fn flag) | `WH_KEYBOARD_LL` (Right Alt / F24) |
+| Text injection | `CGEventCreateKeyboardEvent` | `SendInput` + `KEYEVENTF_UNICODE` |
+| Audio capture | `cpal` (CoreAudio) | `cpal` (WASAPI) |
 
-### Usage
+### macOS Notes
 
-```rust
-use crate::platform;
+- **Accessibility permission** required for Fn key listening and auto-type. After granting, **Cmd+Q restart** the app.
+- Default hotkey: `F13`
 
-let p = platform::current();
-if p.is_accessibility_trusted() {
-    p.type_text("Hello!", Duration::ZERO)?;
-}
-```
+### Windows Notes
 
-### Windows Implementation Status
-
-Initial Windows support is implemented via the platform layer in
-`src-tauri/src/platform/windows.rs`:
-
-1. **Key Listening**: Implemented with `SetWindowsHookExW(WH_KEYBOARD_LL, ...)` on a
-   background thread with a message pump. The default trigger key is **Right Alt**
-   (`VK_RMENU`), with **F24** supported as an alternative (for users who bind it
-   via tools like AutoHotkey).
-2. **Text Injection**: Implemented using `SendInput` with `INPUT_KEYBOARD` and
-   `KEYEVENTF_UNICODE`, so arbitrary Unicode text can be auto-typed into the
-   focused application.
-3. **Audio Capture**: Implemented using the same `cpal`-based pipeline as macOS,
-   writing a temporary WAV file that feeds the Groq transcription API.
-4. **Crate**: Uses the official [`windows`](https://crates.io/crates/windows)
-   bindings for Win32 APIs.
-
-Limitations / Notes:
-- There is currently **no UI to change the Windows trigger key**; it is hard-coded
-  to Right Alt / F24. The global hotkey (default `F13`) remains fully configurable
-  and is the recommended trigger mechanism on Windows.
-- Unlike macOS, there is no explicit Accessibility permission prompt; the
-  "Accessibility" checks in the app are effectively no-ops on Windows.
+- No accessibility permission needed
+- Default hotkey: `Ctrl+Space`
+- Fn key mode uses Right Alt (`VK_RMENU`) or F24 as the trigger key
 
 ---
 

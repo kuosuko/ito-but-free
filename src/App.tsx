@@ -29,6 +29,7 @@ function App() {
   const [typingSpeed, setTypingSpeed] = useState<number>(0);
   const [fnKeyEnabled, setFnKeyEnabled] = useState<boolean>(false);
   const [hasAccessibilityPermission, setHasAccessibilityPermission] = useState<boolean>(false);
+  const [micGain, setMicGain] = useState<number>(1.0);
   const [refineOutputEnabled, setRefineOutputEnabled] = useState<boolean>(false);
   const [refinementPrompt, setRefinementPrompt] = useState<string>("");
   const [refinementModel, setRefinementModel] = useState<string>("qwen/qwen3-32b");
@@ -84,7 +85,10 @@ function App() {
         
         const hasAccess = await invoke<boolean>("accessibility_status");
         setHasAccessibilityPermission(hasAccess);
-        
+
+        const gain = await invoke<number>("get_mic_gain");
+        setMicGain(gain);
+
         const refineEnabled = await invoke<boolean>("get_refine_output_enabled");
         setRefineOutputEnabled(refineEnabled);
         
@@ -176,6 +180,15 @@ function App() {
     }
   }
 
+  async function handleSetMicGain(gain: number) {
+    try {
+      await invoke("set_mic_gain", { gain });
+      setMicGain(gain);
+    } catch (err) {
+      console.error("Failed to set mic gain:", err);
+    }
+  }
+
   async function handleToggleFnKey(enabled: boolean) {
     try {
       if (enabled) {
@@ -231,7 +244,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <TitleBar appName="GroqBara" version="0.2.0" />
+      <TitleBar appName="GroqBara" version="0.3.0" />
 
       <div className="content">
         <Sidebar
@@ -245,6 +258,8 @@ function App() {
           onToggleAutoType={handleToggleAutoType}
           typingSpeed={typingSpeed}
           onSetTypingSpeed={handleSetTypingSpeed}
+          micGain={micGain}
+          onSetMicGain={handleSetMicGain}
           fnKeyEnabled={fnKeyEnabled}
           onToggleFnKey={handleToggleFnKey}
           hasAccessibilityPermission={hasAccessibilityPermission}

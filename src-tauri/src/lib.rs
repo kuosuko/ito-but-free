@@ -5,6 +5,7 @@ use tauri::{
     AppHandle, Emitter, Manager, Runtime,
     menu::{CheckMenuItemBuilder, MenuBuilder, MenuItemBuilder, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
@@ -57,10 +58,13 @@ fn emit_log<R: Runtime>(app: &AppHandle<R>, level: &str, message: impl Into<Stri
     );
 }
 
-// Default shortcut:
-// NOTE: "Fn" cannot be registered as a global shortcut by most OS/hotkey backends.
-// We default to F13, which is a common "extra" function key on macOS keyboards.
+// Default shortcut (platform-specific):
+// macOS: F13 — common "extra" function key on Mac keyboards.
+// Windows: Ctrl+Space — F13 doesn't exist on most PC keyboards.
+#[cfg(target_os = "macos")]
 const DEFAULT_HOTKEY: &str = "F13";
+#[cfg(target_os = "windows")]
+const DEFAULT_HOTKEY: &str = "Control+Space";
 
 const DEFAULT_TRIGGER_MODE: &str = "hold";
 
@@ -79,6 +83,15 @@ fn resolve_type_speed_ms<R: Runtime>(app: &AppHandle<R>) -> u64 {
         .ok()
         .flatten()
         .unwrap_or(DEFAULT_TYPE_SPEED_MS)
+}
+
+const DEFAULT_MIC_GAIN: f32 = 1.0;
+
+fn resolve_mic_gain<R: Runtime>(app: &AppHandle<R>) -> f32 {
+    settings::get_mic_gain(app)
+        .ok()
+        .flatten()
+        .unwrap_or(DEFAULT_MIC_GAIN)
 }
 
 fn resolve_trigger_mode<R: Runtime>(app: &AppHandle<R>) -> String {
@@ -284,9 +297,14 @@ fn do_start_recording<R: Runtime>(app: &AppHandle<R>, state: &AppState) -> Resul
     }
 
     emit_log(app, "info", "Starting recording...");
-    let session = platform::current().start_audio_capture()?;
+    let gain = resolve_mic_gain(app);
+    let session = platform::current().start_audio_capture(gain)?;
     *guard = Some(session);
     let _ = app.emit("recording_state", "recording");
+    // Show floating overlay
+    if let Some(w) = app.get_webview_window("overlay") {
+        let _ = w.show();
+    }
     emit_log(app, "info", "Recording started");
     Ok(())
 }
@@ -307,6 +325,10 @@ async fn do_stop_and_transcribe<R: Runtime>(
     let _ = app.emit("recording_state", "processing");
     let result = do_transcription_pipeline(app, session).await;
     let _ = app.emit("recording_state", "idle");
+    // Hide floating overlay
+    if let Some(w) = app.get_webview_window("overlay") {
+        let _ = w.hide();
+    }
     result
 }
 
@@ -493,6 +515,16 @@ fn get_refinement_model(app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn get_mic_gain(app: AppHandle) -> Result<f32, String> {
+    Ok(resolve_mic_gain(&app))
+}
+
+#[tauri::command]
+fn set_mic_gain(app: AppHandle, gain: f32) -> Result<(), String> {
+    settings::set_mic_gain(&app, gain)
+}
+
+#[tauri::command]
 fn write_clipboard(text: String) -> Result<(), String> {
     set_clipboard_text(&text)
 }
@@ -664,7 +696,11 @@ pub fn run() {
 
             let app_handle2 = app_handle.clone();
             
+            let tray_icon = app.default_window_icon().cloned()
+                .expect("default window icon must be set in tauri.conf.json");
+
             let tray = TrayIconBuilder::new()
+                .icon(tray_icon)
                 .icon_as_template(true)  // macOS: auto-adapt to light/dark mode
                 .menu(&menu)
                 .on_menu_event(move |app, event| {
@@ -737,6 +773,41 @@ pub fn run() {
             // Keep tray alive for app lifetime
             app.manage(tray);
 
+            // ---- Floating recording overlay window ----
+            match WebviewWindowBuilder::new(
+                app,
+                "overlay",
+                WebviewUrl::App("src/overlay.html".into()),
+            )
+            .title("Recording")
+            .inner_size(300.0, 60.0)
+            .resizable(false)
+            .decorations(false)
+            .transparent(true)
+            .shadow(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .visible(false)
+            .focused(false)
+            .build()
+            {
+                Ok(w) => {
+                    // Position at bottom-center of the primary monitor
+                    if let Ok(Some(monitor)) = w.primary_monitor() {
+                        let screen = monitor.size();
+                        let scale = monitor.scale_factor();
+                        let logical_w = screen.width as f64 / scale;
+                        let logical_h = screen.height as f64 / scale;
+                        let x = (logical_w - 300.0) / 2.0;
+                        let y = logical_h - 60.0 - 40.0; // 40px above bottom edge
+                        let _ = w.set_position(tauri::Position::Logical(
+                            tauri::LogicalPosition::new(x, y),
+                        ));
+                    }
+                }
+                Err(e) => eprintln!("Failed to create overlay window: {e}"),
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -760,6 +831,8 @@ pub fn run() {
             get_refinement_prompt,
             set_refinement_model,
             get_refinement_model,
+            get_mic_gain,
+            set_mic_gain,
             write_clipboard,
             type_text,
             accessibility_status,

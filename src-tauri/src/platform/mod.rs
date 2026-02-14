@@ -109,8 +109,9 @@ pub trait Platform: Send + Sync {
 
     /// Start capturing audio from the default input device.
     ///
+    /// `gain` is a multiplier applied to samples (1.0 = no change, >1.0 = louder).
     /// Returns a handle that can be used to stop recording and save to WAV.
-    fn start_audio_capture(&self) -> Result<Box<dyn RecordingHandle>, String>;
+    fn start_audio_capture(&self, gain: f32) -> Result<Box<dyn RecordingHandle>, String>;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Platform Info

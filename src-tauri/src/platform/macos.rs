@@ -86,8 +86,8 @@ impl Platform for MacOSPlatform {
         type_text_impl(text, per_chunk_delay)
     }
 
-    fn start_audio_capture(&self) -> Result<Box<dyn RecordingHandle>, String> {
-        let session = RecordingSession::start().map_err(|e| e.to_string())?;
+    fn start_audio_capture(&self, gain: f32) -> Result<Box<dyn RecordingHandle>, String> {
+        let session = RecordingSession::start(gain).map_err(|e| e.to_string())?;
         Ok(Box::new(session))
     }
 
@@ -349,7 +349,7 @@ struct RecordingSession {
 }
 
 impl RecordingSession {
-    fn start() -> AnyhowResult<Self> {
+    fn start(gain: f32) -> AnyhowResult<Self> {
         let (stop_tx, stop_rx) = mpsc::channel::<()>();
         let (done_tx, done_rx) = mpsc::channel::<AnyhowResult<PathBuf>>();
 
@@ -379,7 +379,10 @@ impl RecordingSession {
                             &config,
                             move |data: &[i16], _| {
                                 if let Ok(mut buf) = samples_cb.lock() {
-                                    buf.extend_from_slice(data);
+                                    for &s in data {
+                                        let amplified = (s as f32 * gain).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                                        buf.push(amplified);
+                                    }
                                 }
                             },
                             err_fn,
@@ -393,7 +396,8 @@ impl RecordingSession {
                             move |data: &[u16], _| {
                                 if let Ok(mut buf) = samples_cb.lock() {
                                     for &s in data {
-                                        let v: i16 = (s as i32 - 32768) as i16;
+                                        let f = (s as f32 / 32768.0 - 1.0) * gain;
+                                        let v: i16 = (f.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                                         buf.push(v);
                                     }
                                 }
@@ -409,7 +413,8 @@ impl RecordingSession {
                             move |data: &[f32], _| {
                                 if let Ok(mut buf) = samples_cb.lock() {
                                     for &s in data {
-                                        let v: i16 = (s.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+                                        let amplified = s * gain;
+                                        let v: i16 = (amplified.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                                         buf.push(v);
                                     }
                                 }

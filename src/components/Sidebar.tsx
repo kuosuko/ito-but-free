@@ -13,6 +13,8 @@ interface SidebarProps {
   onToggleAutoType: (enabled: boolean) => void;
   typingSpeed: number;
   onSetTypingSpeed: (speed: number) => void;
+  micGain: number;
+  onSetMicGain: (gain: number) => void;
   fnKeyEnabled: boolean;
   onToggleFnKey: (enabled: boolean) => void;
   hasAccessibilityPermission: boolean;
@@ -36,6 +38,8 @@ const Sidebar = ({
   onToggleAutoType,
   typingSpeed,
   onSetTypingSpeed,
+  micGain,
+  onSetMicGain,
   fnKeyEnabled,
   onToggleFnKey,
   hasAccessibilityPermission,
@@ -121,6 +125,23 @@ const Sidebar = ({
             {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
         </div>
+      </div>
+
+      {/* Microphone */}
+      <div className="sidebar-group">
+        <h3>Microphone</h3>
+        <label className="label">
+          Gain: {micGain.toFixed(1)}x
+        </label>
+        <input
+          type="range"
+          min="0.5"
+          max="3.0"
+          step="0.1"
+          value={micGain}
+          onChange={(e) => onSetMicGain(Number(e.target.value))}
+          className="slider"
+        />
       </div>
 
       {/* Input Trigger */}

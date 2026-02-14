@@ -22,14 +22,15 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result as AnyhowResult};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE,
+    VIRTUAL_KEY, VK_F24, VK_RMENU,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetMessageW, PostThreadMessageW, SetWindowsHookExW,
-    TranslateMessage, HC_ACTION, HHOOK, KBDLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL, WM_KEYDOWN,
-    WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP, VK_F24, VK_RMENU,
+    TranslateMessage, HC_ACTION, KBDLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL, WM_KEYDOWN,
+    WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,8 +65,8 @@ impl Platform for WindowsPlatform {
         type_text_impl(text, per_chunk_delay)
     }
 
-    fn start_audio_capture(&self) -> Result<Box<dyn RecordingHandle>, String> {
-        let session = RecordingSession::start().map_err(|e| e.to_string())?;
+    fn start_audio_capture(&self, gain: f32) -> Result<Box<dyn RecordingHandle>, String> {
+        let session = RecordingSession::start(gain).map_err(|e| e.to_string())?;
         Ok(Box::new(session))
     }
 
@@ -93,7 +94,7 @@ static KEY_CALLBACK: OnceLock<Arc<Mutex<KeyCallback>>> = OnceLock::new();
 
 extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) -> LRESULT {
     unsafe {
-        if n_code == HC_ACTION {
+        if n_code as u32 == HC_ACTION {
             let kb = &*(l_param.0 as *const KBDLLHOOKSTRUCT);
             let vk = kb.vkCode;
 
@@ -112,14 +113,18 @@ extern "system" fn keyboard_proc(n_code: i32, w_param: WPARAM, l_param: LPARAM) 
             }
         }
 
-        CallNextHookEx(HHOOK(0), n_code, w_param, l_param)
+        CallNextHookEx(None, n_code, w_param, l_param)
     }
 }
 
 pub struct FnKeyListenerImpl {
-    hook: HHOOK,
     thread_id: u32,
 }
+
+// Safety: FnKeyListenerImpl only holds a thread_id (u32) which is safe to
+// send/share across threads. The actual HHOOK lives inside the hook thread.
+unsafe impl Send for FnKeyListenerImpl {}
+unsafe impl Sync for FnKeyListenerImpl {}
 
 impl FnKeyListenerImpl {
     pub fn new(callback: KeyCallback) -> Result<Self, String> {
@@ -129,21 +134,25 @@ impl FnKeyListenerImpl {
             return Err("Fn key listener already active".into());
         }
 
-        let (tx, rx) = mpsc::channel::<Result<(HHOOK, u32), String>>();
+        let (tx, rx) = mpsc::channel::<Result<u32, String>>();
 
         thread::spawn(move || {
             unsafe {
                 // Install low-level keyboard hook on this thread.
-                let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), None, 0);
-                if hook.is_invalid() {
-                    let _ = tx.send(Err("SetWindowsHookExW(WH_KEYBOARD_LL) failed".into()));
-                    return;
-                }
+                let hook = match SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), None, 0) {
+                    Ok(h) => h,
+                    Err(e) => {
+                        let _ = tx.send(Err(format!(
+                            "SetWindowsHookExW(WH_KEYBOARD_LL) failed: {e}"
+                        )));
+                        return;
+                    }
+                };
 
                 // This thread ID is used by `stop()` to post WM_QUIT.
                 let thread_id = windows::Win32::System::Threading::GetCurrentThreadId();
 
-                if tx.send(Ok((hook, thread_id))).is_err() {
+                if tx.send(Ok(thread_id)).is_err() {
                     // Creator went away; just unhook and exit.
                     let _ = windows::Win32::UI::WindowsAndMessaging::UnhookWindowsHookEx(hook);
                     return;
@@ -151,8 +160,8 @@ impl FnKeyListenerImpl {
 
                 // Simple message loop to keep WH_KEYBOARD_LL alive.
                 let mut msg = MSG::default();
-                while GetMessageW(&mut msg, HWND(0), 0, 0).into() {
-                    TranslateMessage(&msg);
+                while GetMessageW(&mut msg, None, 0, 0).into() {
+                    let _ = TranslateMessage(&msg);
                     DispatchMessageW(&msg);
                 }
 
@@ -160,11 +169,11 @@ impl FnKeyListenerImpl {
             }
         });
 
-        let (hook, thread_id) = rx
+        let thread_id = rx
             .recv()
             .map_err(|_| "Keyboard hook thread failed to start".to_string())??;
 
-        Ok(Self { hook, thread_id })
+        Ok(Self { thread_id })
     }
 }
 
@@ -178,7 +187,6 @@ impl KeyListenerHandle for FnKeyListenerImpl {
             // We intentionally do **not** reset KEY_CALLBACK here, so that any
             // in-flight callbacks don't see a suddenly-missing closure. The
             // process is short-lived and only one listener is supported.
-            let _ = self.hook; // suppress unused warning (field kept for future use/debug).
         }
     }
 }
@@ -207,7 +215,7 @@ fn type_text_impl(text: &str, per_chunk_delay: Duration) -> Result<(), String> {
                         r#type: INPUT_KEYBOARD,
                         Anonymous: INPUT_0 {
                             ki: KEYBDINPUT {
-                                wVk: 0,
+                                wVk: VIRTUAL_KEY(0),
                                 wScan: unit,
                                 dwFlags: KEYEVENTF_UNICODE,
                                 time: 0,
@@ -219,7 +227,7 @@ fn type_text_impl(text: &str, per_chunk_delay: Duration) -> Result<(), String> {
                         r#type: INPUT_KEYBOARD,
                         Anonymous: INPUT_0 {
                             ki: KEYBDINPUT {
-                                wVk: 0,
+                                wVk: VIRTUAL_KEY(0),
                                 wScan: unit,
                                 dwFlags: KEYEVENTF_UNICODE | KEYEVENTF_KEYUP,
                                 time: 0,
@@ -230,8 +238,7 @@ fn type_text_impl(text: &str, per_chunk_delay: Duration) -> Result<(), String> {
                 ];
 
                 let sent = SendInput(
-                    inputs.len() as u32,
-                    inputs.as_ptr(),
+                    &inputs,
                     std::mem::size_of::<INPUT>() as i32,
                 );
 
@@ -263,12 +270,15 @@ struct RecordingSession {
 }
 
 impl RecordingSession {
-    fn start() -> AnyhowResult<Self> {
+    fn start(gain: f32) -> AnyhowResult<Self> {
         let (stop_tx, stop_rx) = mpsc::channel::<()>();
         let (done_tx, done_rx) = mpsc::channel::<AnyhowResult<PathBuf>>();
+        let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
 
         thread::spawn(move || {
-            let res = (|| -> AnyhowResult<PathBuf> {
+            // Init phase: open device, build stream, play, warm up.
+            // If any of this fails, signal error via ready_tx and exit.
+            let init = (|| -> AnyhowResult<(cpal::Stream, Arc<Mutex<Vec<i16>>>, u32, u16)> {
                 let host = cpal::default_host();
                 let device = host
                     .default_input_device()
@@ -293,7 +303,10 @@ impl RecordingSession {
                             &config,
                             move |data: &[i16], _| {
                                 if let Ok(mut buf) = samples_cb.lock() {
-                                    buf.extend_from_slice(data);
+                                    for &s in data {
+                                        let amplified = (s as f32 * gain).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                                        buf.push(amplified);
+                                    }
                                 }
                             },
                             err_fn,
@@ -307,7 +320,8 @@ impl RecordingSession {
                             move |data: &[u16], _| {
                                 if let Ok(mut buf) = samples_cb.lock() {
                                     for &s in data {
-                                        let v: i16 = (s as i32 - 32768) as i16;
+                                        let f = (s as f32 / 32768.0 - 1.0) * gain;
+                                        let v: i16 = (f.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                                         buf.push(v);
                                     }
                                 }
@@ -323,7 +337,8 @@ impl RecordingSession {
                             move |data: &[f32], _| {
                                 if let Ok(mut buf) = samples_cb.lock() {
                                     for &s in data {
-                                        let v: i16 = (s.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+                                        let amplified = s * gain;
+                                        let v: i16 = (amplified.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
                                         buf.push(v);
                                     }
                                 }
@@ -337,41 +352,67 @@ impl RecordingSession {
 
                 stream.play()?;
 
-                // Block until stop signal.
-                let _ = stop_rx.recv();
-                drop(stream);
+                // Give Windows audio subsystem a moment to initialize the
+                // capture pipeline. Without this, the first recording after
+                // app launch may capture zero samples.
+                thread::sleep(Duration::from_millis(150));
 
-                // Write WAV.
-                let samples = samples
-                    .lock()
-                    .map_err(|_| anyhow!("Failed to lock samples"))?;
-
-                let mut path = std::env::temp_dir();
-                let filename = format!(
-                    "groqtranscriber-{}.wav",
-                    chrono::Utc::now().format("%Y%m%d-%H%M%S")
-                );
-                path.push(filename);
-
-                let spec = hound::WavSpec {
-                    channels,
-                    sample_rate,
-                    bits_per_sample: 16,
-                    sample_format: hound::SampleFormat::Int,
-                };
-
-                let mut writer =
-                    hound::WavWriter::create(&path, spec).context("Failed to create wav")?;
-                for &s in samples.iter() {
-                    writer.write_sample(s).ok();
-                }
-                writer.finalize().ok();
-
-                Ok(path)
+                Ok((stream, samples, sample_rate, channels))
             })();
 
-            let _ = done_tx.send(res);
+            match init {
+                Err(e) => {
+                    let _ = ready_tx.send(Err(e.to_string()));
+                    let _ = done_tx.send(Err(e));
+                }
+                Ok((stream, samples, sample_rate, channels)) => {
+                    // Audio is now actively capturing — signal the caller.
+                    let _ = ready_tx.send(Ok(()));
+
+                    // Block until stop signal.
+                    let _ = stop_rx.recv();
+                    drop(stream);
+
+                    let res = (|| -> AnyhowResult<PathBuf> {
+                        let samples = samples
+                            .lock()
+                            .map_err(|_| anyhow!("Failed to lock samples"))?;
+
+                        let mut path = std::env::temp_dir();
+                        let filename = format!(
+                            "groqtranscriber-{}.wav",
+                            chrono::Utc::now().format("%Y%m%d-%H%M%S")
+                        );
+                        path.push(filename);
+
+                        let spec = hound::WavSpec {
+                            channels,
+                            sample_rate,
+                            bits_per_sample: 16,
+                            sample_format: hound::SampleFormat::Int,
+                        };
+
+                        let mut writer =
+                            hound::WavWriter::create(&path, spec).context("Failed to create wav")?;
+                        for &s in samples.iter() {
+                            writer.write_sample(s).ok();
+                        }
+                        writer.finalize().ok();
+
+                        Ok(path)
+                    })();
+
+                    let _ = done_tx.send(res);
+                }
+            }
         });
+
+        // Block until audio is actually capturing, so the caller
+        // knows it's safe to show "Recording" to the user.
+        ready_rx
+            .recv()
+            .map_err(|_| anyhow!("Recording thread terminated during init"))?
+            .map_err(|e| anyhow!("{e}"))?;
 
         Ok(Self { stop_tx, done_rx })
     }

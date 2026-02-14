@@ -39,6 +39,10 @@ pub struct Settings {
     #[serde(default)]
     pub refinement_model: Option<String>,
 
+    /// Microphone gain multiplier (1.0 = no change, >1.0 = louder)
+    #[serde(default)]
+    pub mic_gain: Option<f32>,
+
     // ---- Legacy fields kept for backwards compatibility (do not write new values) ----
     /// Legacy: Automatically insert the transcription.
     #[serde(default, skip_serializing)]
@@ -186,4 +190,14 @@ pub fn set_refinement_model<R: Runtime>(app: &AppHandle<R>, model: String) -> Re
 
 pub fn get_refinement_model<R: Runtime>(app: &AppHandle<R>) -> Result<Option<String>, String> {
     Ok(load(app)?.refinement_model)
+}
+
+pub fn set_mic_gain<R: Runtime>(app: &AppHandle<R>, gain: f32) -> Result<(), String> {
+    let mut s = load(app)?;
+    s.mic_gain = Some(gain);
+    save(app, &s)
+}
+
+pub fn get_mic_gain<R: Runtime>(app: &AppHandle<R>) -> Result<Option<f32>, String> {
+    Ok(load(app)?.mic_gain)
 }
