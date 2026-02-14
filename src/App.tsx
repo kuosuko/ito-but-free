@@ -263,6 +263,7 @@ function App() {
             onToggleRecording={toggleRecording}
             transcription={transcription}
             onSetTranscription={setTranscription}
+            triggerHint={fnKeyEnabled ? "Fn" : hotkey}
           />
 
           <LogsPanel logs={logs} onClearLogs={() => setLogs([])} />

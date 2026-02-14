@@ -9,6 +9,7 @@ interface WorkspaceProps {
   onToggleRecording: () => void;
   transcription: string;
   onSetTranscription: (text: string) => void;
+  triggerHint: string;
 }
 
 function formatDuration(seconds: number): string {
@@ -22,6 +23,7 @@ const Workspace = ({
   onToggleRecording,
   transcription,
   onSetTranscription,
+  triggerHint,
 }: WorkspaceProps) => {
   const [elapsed, setElapsed] = useState(0);
   const intervalRef = useRef<number | null>(null);
@@ -118,7 +120,7 @@ const Workspace = ({
           className="workspace-textarea"
           value={transcription}
           onChange={(e) => onSetTranscription(e.target.value)}
-          placeholder="Press your hotkey to start dictating..."
+          placeholder={`Press ${triggerHint} to start dictating...`}
           spellCheck={false}
         />
       </div>
