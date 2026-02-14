@@ -1,6 +1,5 @@
 import "./LogsPanel.css";
 import { Terminal } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 interface LogEntry {
   level: string;
@@ -14,12 +13,6 @@ interface LogsPanelProps {
 }
 
 const LogsPanel = ({ logs, onClearLogs }: LogsPanelProps) => {
-  const logsEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
-
   return (
     <div className="logs-panel">
       <div className="logs-header">
@@ -45,7 +38,6 @@ const LogsPanel = ({ logs, onClearLogs }: LogsPanelProps) => {
             </span>
           </div>
         ))}
-        <div ref={logsEndRef} />
       </div>
     </div>
   );

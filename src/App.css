@@ -46,20 +46,29 @@ body {
   min-height: 0;
 }
 
-/* Scrollbar Styling */
+/* Scrollbar Styling - thin to match macOS feel */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #3f3f46;
-  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #52525b;
+  background-color: rgba(255, 255, 255, 0.25);
 }
 
 ::-webkit-scrollbar-track {
-  background-color: #18181b;
+  background-color: transparent;
+}
+
+/* Global button reset */
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
 }
